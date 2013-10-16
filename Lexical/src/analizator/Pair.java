@@ -17,8 +17,14 @@ public class Pair<X, Y> implements Serializable {
 	 */
 	private static final long serialVersionUID = -6081823517209889511L;
 
+	/**
+	 * First element.
+	 */
 	public final X x;
 	
+	/**
+	 * Second element.
+	 */
 	public final Y y;
 	
 	public Pair(X x, Y y) {

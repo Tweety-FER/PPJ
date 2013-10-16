@@ -11,10 +11,31 @@ import java.util.regex.Pattern;
 
 import analizator.Pair;
 
+/**
+ * A rule parser which takes a standardised text from stdin and parses it into a defined set of rules and states.
+ * For such a file, which defines a set of states, lexical units and lexical rules defined as sets of
+ * regular expressions for states and describe actions to perform if something matches the expression, 
+ * a Map is created.
+ * 
+ * The form of the Map is (StateName => (RegularExpression, ActionList))
+ * Regular expressions and lists of actions are grouped together in a {@link Pair} structure.
+ * 
+ * @author Luka Skukan
+ * @see Pair
+ */
 public class RuleParser {
 	
+	/**
+	 * Used to map temporary definitions of form {name} = regex
+	 */
 	private static Map<String,String> definitions = new HashMap<String,String>();
 	
+	/**
+	 * Parses input from stdin, creating a map of lists of pairs (regular expression => actions to perform)
+	 * per state.
+	 * @return Created map
+	 * @throws IOException If stdin does not exist - never
+	 */
 	public static Map<String, List<Pair<String, List<String>>>> parse() throws IOException{
 		List<String> states = new ArrayList<String>();
 		List<String> lexUnits = new ArrayList<String>();
@@ -98,6 +119,12 @@ public class RuleParser {
 		return stateQueues;
 	}
 	
+	/**
+	 * Parses a regular definition which adheres to format "{name} regex" and stores
+	 * it internally.
+	 * @param line Regular definition
+	 * @return Boolean indicating success of the operation
+	 */
 	private static boolean parseRegularDefinition(String line) {
 		if(line.charAt(0) == '%') {
 			return false;
@@ -112,6 +139,12 @@ public class RuleParser {
 		return true;
 	}
 	
+	/**
+	 * Replaces groups within regular expressions of form "{definitionName}" with the definition
+	 * of the same name.
+	 * @param rule Rule to perform search-and-replace on.
+	 * @return Rule with replaced groups.
+	 */
 	private static String replaceGroups(String rule) {
 		Pattern p = Pattern.compile("\\{([A-Za-z_]+)\\}");
 		Matcher m = p.matcher(rule);
@@ -123,6 +156,11 @@ public class RuleParser {
 		return rule;
 	}
 	
+	/**
+	 * Splits a given line by whitespace and puts all but the first element into a given container.
+	 * @param line Line to split
+	 * @param container List of strings to fill
+	 */
 	private static void splitInto(String line, List<String> container) {
 		String[] parts = line.split("\\s+");
 		for(int i = 1; i < parts.length; i++) {
@@ -132,6 +170,12 @@ public class RuleParser {
 		}
 	}
 	
+	/**
+	 * Parser states the parser has to go internally while at work.
+	 * Marks the current step of the parsing process.
+	 * @author Luka Skukan
+	 *
+	 */
 	private static enum ParserState {
 		REGULAR_DEFINITIONS,
 		STATES,

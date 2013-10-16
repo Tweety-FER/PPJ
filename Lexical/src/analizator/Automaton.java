@@ -8,11 +8,11 @@ import java.util.Set;
 
 /**
  * A model of a nondeterministic finite automaton with epsilon transitions which
- * reaches its next step according to a string input. The model has only one initial
- * and acceptable state. It needs to be filled with states and transitions, as well as
- * having its initial and acceptable states initialised to function
+ * reaches its next step according to a string input. The model has only one initial state. 
+ * It needs to be filled with states and transitions, as well as having its initial and 
+ * acceptable states initialised to function
  * <p><p>
- * The automaton uses textual representations of states.
+ * The automaton uses textual representations of states, while null is used for an epsilon input.
  * @author Luka Skukan
  *
  */
@@ -65,18 +65,34 @@ public class Automaton implements Serializable {
 		this.transitions = new HashMap<Pair<String, String>, Set<String>>();
 	}
 	
+	/**
+	 * Returns the automaton name.
+	 * @return
+	 */
 	public String getName() {
 		return this.name;
 	}
 	
+	/**
+	 * Automaton state getter. Lists all of its states.
+	 * @return Set of states
+	 */
 	public Set<String> getStates() {
 		return this.states;
 	}
 	
+	/**
+	 * Automaton current state getter. Gets set of all current states.
+	 * @return Set of current states
+	 */
 	public Set<String> getCurrentStates() {
 		return this.currentStates;
 	}
 	
+	/**
+	 * Automaton transition getter. Gets map formed as (state, token) => [new states]
+	 * @return
+	 */
 	public Map<Pair<String, String>, Set<String>> getTransitions() {
 		return this.transitions;
 	}
@@ -122,18 +138,34 @@ public class Automaton implements Serializable {
 		System.exit(-5);
 	}
 	
+	/**
+	 * Gets the automaton's initial state.
+	 * @return Initial state
+	 */
 	public String getInitial() {
 		return this.initial;
 	}
 	
+	/**
+	 * Gets automaton's acceptable states.
+	 * @return Acceptable states
+	 */
 	public Set<String> getAcceptables() {
 		return this.acceptables;
 	}
 	
+	/**
+	 * Sets automaton's states to given set of states.
+	 * @param states Set of states.
+	 */
 	public void setAllStates(Set<String> states) {
 		this.states = states;
 	}
 	
+	/**
+	 * Sets all transitions
+	 * @param transitions Map of (state, token) => [list of states to transition to]
+	 */
 	public void setAllTransitions(Map<Pair<String,String>, Set<String>> transitions) {
 		this.transitions = transitions;
 	}

@@ -11,32 +11,61 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.util.Map;
 
+/**
+ * Lexical Analysis Engine which, provided it can read serialized data from analizator/states.ser,
+ * reads a source file text from stdin and produces a list of lexical units in format "unitName line groupedText\n"
+ * on stdout and a list of errors on stdout. Handles error recovery by dropping the first ungrouped
+ * character and trying again from the next one.
+ * @author Luka Skukan
+ *
+ */
 public class LA {
 	
+	/**
+	 * Index of last accepted character
+	 */
 	private static int last = 0;
 	
+	/**
+	 * Index of character current step of analysis is starting from
+	 */
 	private static int init = 0;
 	
+	/**
+	 * Current line index (1-based)
+	 */
 	private static int line = 1;
 	
+	/**
+	 * Index of next character to be read
+	 */
 	private static int index = 0;
 	
-	private static ILexicalAnalizatorState state;
+	/**
+	 * Current lexical state
+	 */
+	private static LexState state;
 	
+	/**
+	 * Text being parsed
+	 */
 	private static char[] text;
 	
-	private static Map<String, ILexicalAnalizatorState> states =
-			new HashMap<String, ILexicalAnalizatorState>();
+	/**
+	 * Map of lexical state wrappers for lexical state name
+	 */
+	private static Map<String, LexState> states =
+			new HashMap<String, LexState>();
 
 	public static void main(String[] args) {
-		List<ILexicalAnalizatorState> tmpStates = deserialize();
+		List<LexState> tmpStates = deserialize();
 		
 		if(tmpStates.isEmpty()) {
 			System.err.println("Cannot find parsed language data.");
 			System.exit(-42);
 		}
 		
-		for(ILexicalAnalizatorState st : tmpStates) {
+		for(LexState st : tmpStates) {
 			states.put(st.getName(), st);
 		}
 		
@@ -47,13 +76,18 @@ public class LA {
 		}
 	}
 	
+	/**
+	 * Deserializes the list of lexical state wrappers required by the analysis engine from analizator/states.ser,
+	 * returning an empty list if the deserialization fails.
+	 * @return List of lexical state wrappers
+	 */
 	@SuppressWarnings("unchecked")
-	private static List<ILexicalAnalizatorState> deserialize() {
-		List<ILexicalAnalizatorState> lStates = null;
+	private static List<LexState> deserialize() {
+		List<LexState> lStates = null;
 		try {
 			FileInputStream fileIn = new FileInputStream("analizator/states.ser");
 			ObjectInputStream objIn = new ObjectInputStream(fileIn);
-			lStates = (List<ILexicalAnalizatorState>) objIn.readObject();
+			lStates = (List<LexState>) objIn.readObject();
 			objIn.close();
 			fileIn.close();
 			return lStates;
@@ -62,7 +96,13 @@ public class LA {
 		}
 	}
 	
-	private static void analyze(ILexicalAnalizatorState initial) throws IOException {
+	/**
+	 * Performs lexical analysis on text read (in bulk) from stdin, assuming the initial lexical
+	 * state is the one for which the wrapper is provided.
+	 * @param initial Initial lexical state wrapper
+	 * @throws IOException If no stdin
+	 */
+	private static void analyze(LexState initial) throws IOException {
 		text = readLines(System.in);
 		state = initial;
 		String expression = null;
@@ -95,7 +135,17 @@ public class LA {
 		}	
 	}
 	
-	
+	/**
+	 * Executes an action in set [VRATI_SE \d+, UDJI_U_STANJE stateName, NOVI_REDAK, lexUnitName]
+	 * Actions, in the same order are:<br>
+	 * <ol>
+	 * <li>Grouping only first \d+ characters instead of all read as matching a regex rule</li>
+	 * <li>Changing lexical state to one provided by name</li>
+	 * <li>Incrementing line counter</li>
+	 * <li>Printing the name of the lexical unit, line in which it occurred and grouped characters</li>
+	 * </ol>
+	 * @param actions
+	 */
 	private static void execute(List<String> actions) {
 		int left = init, right = last, digit = 0;
 		boolean print = false, change = false;
@@ -135,15 +185,23 @@ public class LA {
 				expr.append(text[i]);
 			}
 
-			System.out.println(token + " " + line + " " + rtrim(expr.toString())); //TODO trim?
+			System.out.println(token + " " + line + " " + rtrim(expr.toString()));
 		}
 	}
 	
+	/**
+	 * Displays on stderr an error occured, for which character, state and line.
+	 */
 	private static void displayError() {
 		System.err.println("Lexical error for state " + state.getName() + ", sign " + text[init] + " in " + line);
 		
 	}
 	
+	/**
+	 * Right-trims a string
+	 * @param s String
+	 * @return Right-trimmed string
+	 */
 	private static String rtrim(String s) {
 		int i;
 		for(i = s.length() - 1; i >= 0 && Character.isWhitespace(s.charAt(i));) {
@@ -153,6 +211,12 @@ public class LA {
 		return s.substring(0, i+1);
 	}
 
+	/**
+	 * Reads lines in bulk from stream and splits them into a character array.
+	 * @param stream S Stream
+	 * @return Read characters as an array
+	 * @throws IOException If stream cannot be read from
+	 */
 	private static char[] readLines(InputStream stream) throws IOException {
 		StringBuffer data = new StringBuffer();
 		BufferedReader reader = new BufferedReader(
