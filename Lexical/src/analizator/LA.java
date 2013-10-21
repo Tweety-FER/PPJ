@@ -92,7 +92,7 @@ public class LA {
 			fileIn.close();
 			return lStates;
 		} catch(Exception e) {
-			return new ArrayList<>();
+			return new ArrayList<LexState>();
 		}
 	}
 	

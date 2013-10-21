@@ -82,7 +82,7 @@ public class AutomatonGenerator {
 	
 	/**
 	 * Transforms a regular expression into a set of rules for a provided automaton.
-	 * Employs the algorithm given in "Prevođenje Programskih Jezika, Srbljić, 2012., Zagreb" 
+	 * Employs the algorithm given in "Prevodenje Programskih Jezika, Srbljic, 2012., Zagreb" 
 	 * @param symbols Array of symbols forming a regular expression
 	 * @param aut Automaton for which to create states
 	 * @return Pair of first and last state to go through for given regular expression
