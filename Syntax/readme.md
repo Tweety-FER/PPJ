@@ -11,10 +11,10 @@ mogu adresirati sa .get() funkcijom, koja prima dva stringa -> ime stanja i (ne)
 koja tablica). Akcije koje se nalaze na određenom indeksu su iste kao u knjizi:
 
 - Pomakni(ime_stanja)
-- Reduciraj(A->alpha)
+- Reduciraj(&lt;A&gt;->alpha)
 - Prihvati()
 - Odbaci()
 - Stavi(ime_stanja)
-npr., ako imamo produkciju <A>->aab, onda za stanje <A>->aa*b i završni znak b imamo definiranu
-akciju Reduciraj(<A>->aab) koja treba skinuti desnu stranu sa stoga i staviti <A> na stog (to
+npr., ako imamo produkciju &lt;A&gt;->aab, onda za stanje &lt;A&gt;->aa*b i završni znak b imamo definiranu
+akciju Reduciraj(&lt;A&gt;->aab) koja treba skinuti desnu stranu sa stoga i staviti &lt;A&gt; na stog (to
 vi implementirate)
