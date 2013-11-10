@@ -1,10 +1,8 @@
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 
 public class AutomatonSimplifier {
@@ -17,6 +15,7 @@ public class AutomatonSimplifier {
 	}
 
 	private static EpsNDAutomaton epsToNondeterministic(EpsNDAutomaton eNKA) {
+		System.out.println("\tPretvaram eNKA u NKA");
 		EpsNDAutomaton NKA = new EpsNDAutomaton("Franjo");
 		NKA.setAlphabet(eNKA.getAlphabet());
 		NKA.setAllStates(eNKA.getStates());
@@ -31,8 +30,11 @@ public class AutomatonSimplifier {
 		Map<Pair<String, String>, Set<String>> eTransitions = eNKA.getTransitions();
 		Map<Pair<String, String>, Set<String>> newTrans = new HashMap<Pair<String,String>, Set<String>>();
 		
-		for(String alpha : eNKA.getAlphabet()) {
-			for(String state : NKA.getStates()) {
+		Set<String> alphabet = eNKA.getAlphabet();
+		Set<String> states = NKA.getStates();
+		
+		for(String alpha : alphabet) {
+			for(String state : states) {
 				calculateTransitions(eTransitions, newTrans, state, alpha);
 			}
 		}
@@ -44,58 +46,49 @@ public class AutomatonSimplifier {
 	private static FDAutomaton gotoDeterministic(EpsNDAutomaton NKA, Set<String> initial) {
 		FDAutomaton DKA = new FDAutomaton("Josip");
 
+		System.out.println("\tPretvaram NKA u DKA");
 		Set<String> alphabet = NKA.getAlphabet();
 		Set<Set<String>> tempSet = new HashSet<Set<String>>();
-		List<String> helper;
 		DKA.setAlphabet(alphabet);
 		Map<Pair<String,String>, Set<String>> transitions = NKA.getTransitions();
 		Set<String> nkaAcceptable = NKA.getAcceptables();
 		
-		Set<String> initialSet = new HashSet<String>();
-		initialSet.addAll(initial);
-		DKA.addState(initialSet.toString());
-		DKA.addAcceptable(initialSet.toString());
-		DKA.setInitial(initialSet.toString());
-		tempSet.add(initialSet);
+		DKA.addState(initial.toString());
+		DKA.addAcceptable(initial.toString());
+		DKA.setInitial(initial.toString());
+		tempSet.add(initial);
 
-		
 		int oldlen = 0;
 		int len = tempSet.size();
 		boolean acceptable = false;
 		while(len != oldlen) {
 			Set<Set<String>> newSets = new HashSet<Set<String>>();
 			for(Set<String> states : tempSet) {
+				String from = new TreeSet<String>(states).toString();
 				for(String a : alphabet) {
 					Set<String> temp = new HashSet<String>();
+					
 					for(String s: states) {
-						Pair<String, String> key = new Pair<String, String>(s, a);
-						Set<String> got = transitions.get(key);
-						if(got != null) {
-							temp.addAll(got);
-						}
-						acceptable = false;
-						for(String st : temp) {
-							if(nkaAcceptable.contains(st)) {
-								acceptable = true;
-								break;
-							}
-						}
-						
-						helper = new ArrayList<String>(temp);
-						Collections.sort(helper);
-						String name = helper.toString();
-						
-						helper = new ArrayList<String>(states);
-						Collections.sort(helper);
-						String from = helper.toString();
-						
-						if(!temp.isEmpty()) {
-							DKA.addState(name);
-							if(acceptable) DKA.addAcceptable(name);
-							DKA.addTransition(new Pair<String, String>(from, a), name);
+						Set<String> got = transitions.get(new Pair<String, String>(s, a));
+						if(got != null) temp.addAll(got);
+					}
+					
+					acceptable = false;
+					for(String st : temp) {
+						if(nkaAcceptable.contains(st)) {
+							acceptable = true;
+							break;
 						}
 					}
-					newSets.add(temp);
+					
+					String name = new TreeSet<String>(temp).toString();
+					
+					if(!temp.isEmpty()) {
+						DKA.addState(name);
+						if(acceptable) DKA.addAcceptable(name);
+						DKA.addTransition(new Pair<String, String>(from, a), name);
+						newSets.add(temp);
+					}
 				}
 			}
 			

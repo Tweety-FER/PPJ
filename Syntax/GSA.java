@@ -31,27 +31,36 @@ public class GSA {
 			System.exit(-20);
 		}
 		
+		System.out.println("Zapocinjem generiranje.\nGeneriram ZAPOCINJE.");
 		begins = calculatebegins();
-		FDAutomaton dka = AutomatonSimplifier.toDeterministic(generateAutomaton());
 		
+		System.out.println("Generiram eNKA");
+		EpsNDAutomaton enka = generateAutomaton();
+		System.out.println("\teNKA ima " + enka.getStates().size() + " stanja");
+		
+		System.out.println("Generiram DKA");
+		FDAutomaton dka = AutomatonSimplifier.toDeterministic(enka);
+		System.out.println("\tDKA ima " + dka.getStates().size() + " stanja");
+		
+		System.out.println("Generiram tablice");
 		Table action = TableConstructor.constructAction(dka, tcs, ntcs.get(0).symbol);
 		Table newState = TableConstructor.constructNewState(dka, ntcs);
 		String initial = "0";
 
 		for(String name : action.getRowSet()) {
-			if(action.get(name, BOTTOM).equals("Prihvati()")) {
+			if("Prihvati()".equals(action.get(name, BOTTOM))) {
 				initial = name;
 				break;
 			}
 		}
 		
-		if(!serialize(initial, action, newState)) {
+		if(!serialize(initial, action, newState, ntcs)) {
 			System.err.println("Could not serialize parsed data");
 			System.exit(666);
 		}
 	}
 	
-	private static boolean serialize(String initialState, Table action, Table newState) {
+	private static boolean serialize(String initialState, Table action, Table newState, List<NonTerminalCharacter> ntcs) {
 		return true; //TODO Implement
 	}
 	
