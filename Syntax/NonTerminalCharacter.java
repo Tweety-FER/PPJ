@@ -1,11 +1,29 @@
 import java.util.List;
 
+/**
+ * Representation of a non-terminal character in formal grammar.
+ * @author Luka Skukan
+ *
+ */
 public class NonTerminalCharacter {
 
+	/**
+	 * The character itself.
+	 */
 	public final String symbol;
 	
+	/**
+	 * List of its transitions.
+	 */
 	public final List<List<String>> transitions;
 	
+	/**
+	 * Constructs a new non-terminal character represented by given symbol and with
+	 * the listed transitions.
+	 * @param symbol The non-terminal character
+	 * @param transitions List of right sides of its transition (elements of the right side are represented
+	 * by another list)
+	 */
 	public NonTerminalCharacter(String symbol, List<List<String>> transitions) {
 		this.symbol = symbol;
 		this.transitions = transitions;
@@ -47,6 +65,4 @@ public class NonTerminalCharacter {
 			return false;
 		return true;
 	}
-	
-	
 }

@@ -1,9 +1,27 @@
+
+/**
+ * A terminal character of formal grammar. It contains the symbol itself and the information whether it is used
+ * as a synchronisation character.
+ * @author Luka Skukan
+ *
+ */
 public class TerminalCharacter {
 
+	/**
+	 * The symbol
+	 */
 	final public String symbol;
 	
+	/**
+	 * Whether it is used a synchronisation character if LR parsing
+	 */
 	final public boolean isSync;
 	
+	/**
+	 * Constructs a new terminal character.
+	 * @param symbol Character
+	 * @param isSync Is it a synchronisation character?
+	 */
 	public TerminalCharacter(String symbol, boolean isSync) {
 		this.symbol = symbol;
 		this.isSync = isSync;
