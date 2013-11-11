@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,56 +29,31 @@ public class TableConstructor {
 						if(tSym != null) {
 							action.set(t, c, "Pomakni(" + tSym + ")");
 						}
-					} else if(s.matches("^.*?!\\,\\{(.+?)\\}.*$")) {
-						String state = s.replaceAll("^(<.+?>)->.*$", "$1");
-						String line = s.replaceAll("^<.+?>->(.*?)!.*$", "$1");
-						if(line.isEmpty()) line = "$";
-						Set<String> tSet = new HashSet<String>();
+					} 
+				} else if(s.matches("^.*?!\\,\\{(.+?)\\}.*$")) {
+					String state = s.replaceAll("^(<.+?>)->.*$", "$1");
+					String line = s.replaceAll("^<.+?>->(.*?)!.*$", "$1");
+					if(line.isEmpty()) line = "$";
+					Set<String> tSet = new HashSet<String>();
+					
+					String[] elems = s.replaceAll("^.*?!\\,\\{(.+?)\\}.*$", "$1").split(",");
+					for(String e : elems) tSet.add(e);
+					
+					for(String ch : tSet) {
+						if(action.get(t, ch) == null) {
+							action.set(t, ch, "Reduciraj(" + state + "->" + line + ")");
+						} 
 						
-						String[] elems = s.replaceAll("^.*?!\\,\\{(.+?)\\}.*$", "$1").split(",");
-						for(String e : elems) tSet.add(e);
-						
-						for(String ch : tSet) {
-							if(action.get(t, ch) == null) {
-								action.set(t, ch, "Reduciraj(" + state + "->" + line + ")");
-							} 
-							
-							if(ch.equals(GSA.BOTTOM) && state.equals(initial)) {
-								action.set(t, GSA.BOTTOM, "Prihvati()");
-							}
+						if(ch.equals(GSA.BOTTOM) && state.equals(initial)) {
+							action.set(t, GSA.BOTTOM, "Prihvati()");
 						}
 					}
 				}
 			}
 		}
-//		
-//		for(String t : stateList) {
-//			Set<String> set = setFromString(t);
-//			for(String s : set) {
-//				if(s.matches("^.*?!\\,\\{(.+?)\\}.*$")) {
-//					String state = s.replaceAll("^(<.+?>)->.*$", "$1");
-//					String line = s.replaceAll("^<.+?>->(.*?)!.*$", "$1");
-//					if(line.isEmpty()) line = "$";
-//					Set<String> tSet = new HashSet<String>();
-//					
-//					String[] elems = s.replaceAll("^.*?!\\,\\{(.+?)\\}.*$", "$1").split(",");
-//					for(String e : elems) tSet.add(e);
-//					
-//					for(String c : tSet) {
-//						if(action.get(t, c) == null) {
-//							action.set(t, c, "Reduciraj(" + state + "->" + line + ")");
-//						} 
-//						
-//						if(c.equals(GSA.BOTTOM) && state.equals(initial)) {
-//							action.set(t, GSA.BOTTOM, "Prihvati()");
-//						}
-//					}
-//				}
-//			}
-//		}
-//	
-//		System.out.println("\tUredujem tablicu Akcija");
-//		finalize(action);
+		
+		System.out.println("\tUredujem tablicu Akcija");
+		finalize(action);
 		return action;
 	}
 	
@@ -103,12 +77,12 @@ public class TableConstructor {
 			}
 		}
 		
-//		System.out.println("\tUredujem tablicu NovoStanje");
-//		finalize(newState);
+		System.out.println("\tUredujem tablicu NovoStanje");
+		finalize(newState);
 		return newState;
 	}
 	
-//	private static void finalize(Table t) {
+	private static void finalize(Table t) {
 //		
 //		Map<String, String> pairs = new HashMap<String, String>();
 //		Map<String, Integer> newRows = new HashMap<String, Integer>(); 
@@ -139,12 +113,12 @@ public class TableConstructor {
 //			System.exit(-11);
 //		}
 //		
-//		for(String r : t.getRowSet()) {
-//			for(String c: t.getColSet()) {
-//				if(t.get(r, c) == null) t.set(r, c, "Odbaci()");
-//			}
-//		}
-//	}
+		for(String r : t.getRowSet()) {
+			for(String c: t.getColSet()) {
+				if(t.get(r, c) == null) t.set(r, c, "Odbaci()");
+			}
+		}
+	}
 	
 	private static Set<String> setFromString(String str) {
 		if(str.length() < 3) return new TreeSet<String>();

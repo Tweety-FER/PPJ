@@ -48,11 +48,15 @@ public class GSA {
 		String initial = "0";
 
 		for(String name : action.getRowSet()) {
-			if("Prihvati()".equals(action.get(name, BOTTOM))) {
+			if(name.matches("^.*?" + INITIAL +".*$")) {
 				initial = name;
 				break;
 			}
 		}
+		
+		System.out.println(action);
+		
+		System.out.println(initial);
 		
 		if(!serialize(initial, action, newState, ntcs)) {
 			System.err.println("Could not serialize parsed data");
