@@ -1,4 +1,3 @@
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,8 +50,38 @@ public class GSA {
 		}
 	}
 	
+	/**
+	 * @return <code>false</code> is there was some error during serialization,
+	 * 			<code>true</code> if serialization was successful
+	 */
+	
 	private static boolean serialize(String initialState, Table action, Table newState) {
-		return true; //TODO Implement
+        FileOutputStream outFile = null;
+        ObjectOutputStream outObject = null;
+       
+        try {
+                outFile = new FileOutputStream("analizator/initialState.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeBytes(initialState);
+                outFile.close();
+                outObject.close();
+               
+                outFile = new FileOutputStream("analizator/terminal.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeObject(tcs);
+                outFile.close();
+                outObject.close();
+               
+                outFile = new FileOutputStream("analizator/tables.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeObject(new Pair<Table, Table>(action, newState));
+                outFile.close();
+                outObject.close();
+               
+        } catch (IOException e) {
+                return false;
+        }
+        return true;
 	}
 	
 	private static Map<String, HashSet<String>> calculatebegins() {
