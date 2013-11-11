@@ -1,5 +1,8 @@
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,10 +57,6 @@ public class GSA {
 			}
 		}
 		
-		System.out.println(action);
-		
-		System.out.println(initial);
-		
 		if(!serialize(initial, action, newState, ntcs)) {
 			System.err.println("Could not serialize parsed data");
 			System.exit(666);
@@ -65,7 +64,39 @@ public class GSA {
 	}
 	
 	private static boolean serialize(String initialState, Table action, Table newState, List<NonTerminalCharacter> ntcs) {
-		return true; //TODO Implement
+		FileOutputStream outFile = null;
+        ObjectOutputStream outObject = null;
+        
+        File f = new File("analizator");
+        if(!f.exists()) {
+        	if(!f.mkdir()) {
+        		return false;
+        	}
+        }
+       
+        try {
+                outFile = new FileOutputStream("analizator/initialState.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeObject(initialState);
+                outFile.close();
+                outObject.close();
+               
+                outFile = new FileOutputStream("analizator/terminal.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeObject(tcs);
+                outFile.close();
+                outObject.close();
+               
+                outFile = new FileOutputStream("analizator/tables.ser");
+                outObject = new ObjectOutputStream(outFile);
+                outObject.writeObject(new Pair<Table, Table>(action, newState));
+                outFile.close();
+                outObject.close();
+               
+        } catch (IOException e) {
+                return false;
+        }
+        return true;
 	}
 	
 	private static Map<String, HashSet<String>> calculatebegins() {
