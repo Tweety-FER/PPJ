@@ -40,11 +40,11 @@ public class TableConstructor {
 					for(String e : elems) tSet.add(e);
 					
 					for(String ch : tSet) {
-						if(action.get(t, ch) == null) {
+						if(action.get(t, ch) == null && !state.equals(GSA.INITIAL)) {
 							action.set(t, ch, "Reduciraj(" + state + "->" + line + ")");
 						} 
-						
-						if(ch.equals(GSA.BOTTOM) && state.equals(initial)) {
+
+						if(ch.equals(GSA.BOTTOM) && s.equals(GSA.FINAL_NAME)) {
 							action.set(t, GSA.BOTTOM, "Prihvati()");
 						}
 					}

@@ -16,7 +16,10 @@ public class GSA {
 	
 	public final static String DELIM = "!";
 	public final static String BOTTOM = "#";
-	public final static String INITIAL = "<initial_parser_state>";
+	public final static String INITIAL = "<%>";
+	public static String INIT_NAME;
+	public static String FINAL_NAME;
+	
 	private static Map<String, HashSet<String>> begins;
 	private static List<TerminalCharacter> tcs;
 	private static List<NonTerminalCharacter> ntcs;
@@ -61,6 +64,10 @@ public class GSA {
 			System.err.println("Could not serialize parsed data");
 			System.exit(666);
 		}
+		
+		System.out.println(dka);
+		System.out.println(action);
+		System.out.println(newState);
 	}
 	
 	private static boolean serialize(String initialState, Table action, Table newState, List<NonTerminalCharacter> ntcs) {
@@ -160,26 +167,34 @@ public class GSA {
 		
 		
 		NonTerminalCharacter fst = ntcs.get(0);
-		
+		List<List<String>> tmpa = new ArrayList<List<String>>();
+		List<String> tmpb = new ArrayList<String>();
+		tmpb.add(fst.symbol);
+		tmpa.add(tmpb);
+		NonTerminalCharacter init = new NonTerminalCharacter(INITIAL, tmpa);
+		ntcs.add(init);
+ 		
 		set.add("#");
 		
-		recursiveGenerate(automaton, fst, set, null);
+		recursiveGenerate(automaton, init, set, null);
 		
-		automaton.addState(INITIAL);
-		automaton.addAcceptable(INITIAL);
-		automaton.setInitial(INITIAL);
-		
+		INIT_NAME = INITIAL + "->" + DELIM + fst.symbol + ",{" + BOTTOM + "}";
+		FINAL_NAME = INITIAL + "->" + fst.symbol + DELIM + ",{" + BOTTOM + "}";
+//		
+//		automaton.addState(INITIAL);
+//		automaton.addAcceptable(INITIAL);
+		automaton.setInitial(INIT_NAME);
 		Set<String> newStates = new HashSet<String>();
 		
 		for(String state : automaton.getStates()) {
 			if(state.matches("^" + fst.symbol + "->\\" + DELIM + ".+$"))
 				newStates.add(state);
 		}
-		
-		automaton.addTransition(
-				new Pair<String, String>(INITIAL, null), 
-				newStates
-				);
+//		
+//		automaton.addTransition(
+//				new Pair<String, String>(INITIAL, null), 
+//				newStates
+//				);
 		
 		return automaton;
 	}

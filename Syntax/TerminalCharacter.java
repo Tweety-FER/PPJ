@@ -1,3 +1,5 @@
+import java.io.Serializable;
+
 
 /**
  * A terminal character of formal grammar. It contains the symbol itself and the information whether it is used
@@ -5,7 +7,9 @@
  * @author Luka Skukan
  *
  */
-public class TerminalCharacter {
+public class TerminalCharacter implements Serializable {
+
+	private static final long serialVersionUID = -3218849804223181514L;
 
 	/**
 	 * The symbol
