@@ -1,5 +1,3 @@
-
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -21,8 +19,9 @@ public class GSA {
 	public static String FINAL_NAME;
 	
 	private static Map<String, HashSet<String>> begins;
-	private static List<TerminalCharacter> tcs;
-	private static List<NonTerminalCharacter> ntcs;
+	public static List<TerminalCharacter> tcs;
+	public static List<NonTerminalCharacter> ntcs;
+	private static List<String> empty = new ArrayList<String>();
 	private static Map<String, Set<String>> dictionary = new HashMap<String, Set<String>>();
 	
 	public static void main(String[] args) {
@@ -38,7 +37,8 @@ public class GSA {
 		}
 		
 		System.out.println("Zapocinjem generiranje.\nGeneriram ZAPOCINJE.");
-		begins = calculatebegins();
+//		begins = calculatebegins();
+		begins();
 		
 		System.out.println("Generiram eNKA");
 		EpsNDAutomaton enka = generateAutomaton();
@@ -51,10 +51,10 @@ public class GSA {
 		System.out.println("Generiram tablice");
 		Table action = TableConstructor.constructAction(dka, tcs, ntcs.get(0).symbol);
 		Table newState = TableConstructor.constructNewState(dka, ntcs);
-		String initial = "0";
+		String initial = "LOL";
 
 		for(String name : action.getRowSet()) {
-			if(name.matches("^.*?" + INITIAL +".*$")) {
+			if(name.contains(INIT_NAME)) {
 				initial = name;
 				break;
 			}
@@ -64,37 +64,26 @@ public class GSA {
 			System.err.println("Could not serialize parsed data");
 			System.exit(666);
 		}
-		
-		System.out.println(dka);
-		System.out.println(action);
-		System.out.println(newState);
 	}
 	
 	private static boolean serialize(String initialState, Table action, Table newState, List<NonTerminalCharacter> ntcs) {
 		FileOutputStream outFile = null;
         ObjectOutputStream outObject = null;
-        
-        File f = new File("analizator");
-        if(!f.exists()) {
-        	if(!f.mkdir()) {
-        		return false;
-        	}
-        }
        
         try {
-                outFile = new FileOutputStream("analizator/initialState.ser");
+                outFile = new FileOutputStream("initialState.ser");
                 outObject = new ObjectOutputStream(outFile);
                 outObject.writeObject(initialState);
                 outFile.close();
                 outObject.close();
                
-                outFile = new FileOutputStream("analizator/terminal.ser");
+                outFile = new FileOutputStream("terminal.ser");
                 outObject = new ObjectOutputStream(outFile);
                 outObject.writeObject(tcs);
                 outFile.close();
                 outObject.close();
                
-                outFile = new FileOutputStream("analizator/tables.ser");
+                outFile = new FileOutputStream("tables.ser");
                 outObject = new ObjectOutputStream(outFile);
                 outObject.writeObject(new Pair<Table, Table>(action, newState));
                 outFile.close();
@@ -106,55 +95,107 @@ public class GSA {
         return true;
 	}
 	
-	private static Map<String, HashSet<String>> calculatebegins() {
-		Map<String, HashSet<String>> begins = new HashMap<String, HashSet<String>>();
+	
+	private static void calculateEmpty() {
+		boolean hasNew = true;
 		
-		//Calculates directlyBegins
+		while(hasNew) {
+			hasNew = false;
+			for(NonTerminalCharacter ntc : ntcs) {
+				if(empty.contains(ntc.symbol)) continue;
+				
+				for(List<String> rights : ntc.transitions) {
+					boolean f = true;
+					
+					for(String c : rights) {
+						if(c.trim().equals("$")) continue;
+						if(!c.matches("<.+?>") || !empty.contains(c)) {
+							f = false;
+							break;
+						}
+					}
+					
+					if(f) {
+						hasNew = true;
+						empty.add(ntc.symbol);
+						break;
+					}
+				}
+			}
+		}
+		
+		empty.add("$");
+	}
+	
+	private static void directlyBegins() {
+		begins = new HashMap<String, HashSet<String>>();
 		for(NonTerminalCharacter ntc : ntcs) {
 			for(List<String> right : ntc.transitions) {
-				if(right.isEmpty()) continue;
-				if(right.get(0).equals("$")) continue; //Screw eps productions
-				if(! begins.containsKey(ntc.symbol)) {
-					HashSet<String> temp = new HashSet<String>();
-					temp.add(right.get(0));
-					begins.put(ntc.symbol, temp);
-				} else {
-					begins.get(ntc.symbol).add(right.get(0));
+				for(String c : right) {
+					if(c.trim().equals("$")) continue;
+					HashSet<String> beginsOfNtc = begins.get(ntc.symbol);
+					if(beginsOfNtc == null) beginsOfNtc = new HashSet<String>();
+					beginsOfNtc.add(c);
+					begins.put(ntc.symbol, beginsOfNtc);
+					if(!empty.contains(c)) break;
 				}
 			}
 		}
+	}
+	
+	private static void begins() {
+		calculateEmpty();
+		directlyBegins();
+		boolean hasNew = true;
+		HashSet<String> set;
 		
-		//Calculates begins
-		for(NonTerminalCharacter ntc : ntcs) {
-			Set<String> beginnings = begins.get(ntc.symbol);
-			beginnings.add(ntc.symbol);
-			int len = beginnings == null ? 0 : beginnings.size();
-			int oldLen = 0;
-			
-			while(len != oldLen) {
+		for(TerminalCharacter tc : tcs) {
+			set = new HashSet<String>();
+			set.add(tc.symbol);
+			begins.put(tc.symbol, set);
+		}
+		
+		while(hasNew) {
+			hasNew = false;
+			for(NonTerminalCharacter ntc : ntcs) {
+				HashSet<String> beginsNtc = begins.get(ntc.symbol);
+				beginsNtc.add(ntc.symbol);
 				Set<String> temp = new HashSet<String>();
-				for(String c : beginnings) {
-					if(!c.matches("^<.+>$")) continue;
-					Set<String> cBegins = begins.get(c);
-					temp.addAll(cBegins);
+				
+				for(String c : beginsNtc) {
+					set = begins.get(c);
+					if(set == null) continue;
+					
+					for(String begC : set) {
+						if(!beginsNtc.contains(begC)) {
+							temp.add(begC);
+							hasNew = true;
+						}
+					}
 				}
 				
-				beginnings.addAll(temp);
-				begins.put(ntc.symbol, (HashSet<String>) beginnings);
-				oldLen = len;
-				len = beginnings.size();
+				if(temp != null) {
+					beginsNtc.addAll(temp);
+				}
+				
+				begins.put(ntc.symbol, beginsNtc);
 			}
 		}
 		
-		//Reflexive for terminal characters
-		for(TerminalCharacter tc : tcs) {
-			HashSet<String> temp = new HashSet<String>();
-			temp.add(tc.symbol);
-			begins.put(tc.symbol, temp);
+		for(NonTerminalCharacter ntc : ntcs) {
+			Set<String> toDelete = new HashSet<String>();
+			HashSet<String> beginsNtc = begins.get(ntc.symbol);
+			
+			for(String c : beginsNtc) {
+				if(c.matches("<.+?>")) {
+					toDelete.add(c);
+				}
+			}
+			
+			beginsNtc.removeAll(toDelete);
 		}
-		
-		return begins;
 	}
+
 	
 	private static EpsNDAutomaton generateAutomaton() {
 		EpsNDAutomaton automaton = new EpsNDAutomaton("Roko");
@@ -180,9 +221,7 @@ public class GSA {
 		
 		INIT_NAME = INITIAL + "->" + DELIM + fst.symbol + ",{" + BOTTOM + "}";
 		FINAL_NAME = INITIAL + "->" + fst.symbol + DELIM + ",{" + BOTTOM + "}";
-//		
-//		automaton.addState(INITIAL);
-//		automaton.addAcceptable(INITIAL);
+
 		automaton.setInitial(INIT_NAME);
 		Set<String> newStates = new HashSet<String>();
 		
@@ -190,11 +229,6 @@ public class GSA {
 			if(state.matches("^" + fst.symbol + "->\\" + DELIM + ".+$"))
 				newStates.add(state);
 		}
-//		
-//		automaton.addTransition(
-//				new Pair<String, String>(INITIAL, null), 
-//				newStates
-//				);
 		
 		return automaton;
 	}
@@ -228,7 +262,7 @@ public class GSA {
 	}
 	
 	private static Set<String> recursiveGenerate(
-			EpsNDAutomaton a, NonTerminalCharacter origin, Set<String> set, String nextC) {
+			EpsNDAutomaton a, NonTerminalCharacter origin, Set<String> set, List<String> nextC) { //String nextC
 		
 		Set<String> initials = new TreeSet<String>();
 		set = calculateSet(set, nextC);
@@ -241,37 +275,30 @@ public class GSA {
 				
 				List<String> step = steps.get(i);
 				String afterDelim = null;
-				String nextChar = null; 
+				List<String> nextChars = null; 
+				//Delimiter index je na i !!!
 				
-				try{
-					//Ako postoji iduci :
-					int delim = steps.indexOf(DELIM);
-					if(delim + 1 < steps.size())
-						afterDelim = step.get(step.indexOf(DELIM) + 1);
-					
-					//Dodaj prijelaz iz ovog u iduci (radi)
-					String p = flatten(origin.symbol, steps.get(i), set);
-					addToAutomaton(a, p);
-					
-					try {
-						String n = flatten(origin.symbol, steps.get(i + 1), set);
-						addToAutomaton(a, n);
-						Set<String> newStates = new HashSet<String>();
-						newStates.add(n);
-						a.addTransition(new Pair<String, String>(p, afterDelim), newStates);
-						nextChar = step.get(step.indexOf(DELIM) + 2);
-					} catch(IndexOutOfBoundsException ignorable2) {}
-					
-					//Za nonTerminal dodaj epsilon prijelaz u sve produkcije tog
-					if(afterDelim != null && afterDelim.matches("^<\\w+>$")) {
+				//Dodaj prijelaz u iduci
+				String p = flatten(origin.symbol, steps.get(i), set);
+				addToAutomaton(a, p);
+				if(i < steps.size() - 1) {
+					afterDelim = step.get(i + 1);
+					String n = flatten(origin.symbol, steps.get(i+1), set);
+					addToAutomaton(a, n);
+					Set<String> tmp = new HashSet<String>();
+					tmp.add(n);
+					a.addTransition(new Pair<String, String>(p, afterDelim), tmp);
+					if(i < step.size() - 2) nextChars = step.subList(i+2, step.size()); 
+						//nextChar = step.get(i + 2);
+					if(afterDelim != null && afterDelim.matches("<.+?>")) {
 						NonTerminalCharacter next = forName(afterDelim);
-						String key = origin.symbol + next + calculateSet(set, nextChar).toString();
+						String key = origin.symbol + set + next + calculateSet(set, nextChars).toString();
 						Set<String> options;
 						if(dictionary.containsKey(key)) {
 							options = dictionary.get(key);
 						} else {
 							dictionary.put(key, new HashSet<String>());
-							options = recursiveGenerate(a, next, set, nextChar);
+							options = recursiveGenerate(a, next, set, nextChars);
 							dictionary.put(key, options);
 						}
 
@@ -285,37 +312,34 @@ public class GSA {
 									); 
 						}
 					}
-
-				} catch(IndexOutOfBoundsException ignorable) {}
+				}
 			}
 		}
 		
 		return initials;
 	}
 	
-	private static Set<String> calculateSet(Set<String> previous, String c) {
+	private static Set<String> calculateSet(Set<String> previous, List<String> cs) { //Just one c
 		Set<String> current = new HashSet<String>();
-		if(c == null) {
-			current.addAll(previous);
-		} else {
-			if(c.matches("^<\\w+>$")) {
-				NonTerminalCharacter ntc = forName(c);
-				boolean empty = false;
-				for(List<String> transition : ntc.transitions) {
-					if(transition.size() == 1 && transition.get(0).equals("$")) {
-						empty = true;
-						break;
-					}
-				}
-				
-				if(empty) {
-					current.add(BOTTOM);
-				}
+		boolean generatesEmpty = true;
+		
+		if(cs != null) {
+			for(String c : cs) {
+				if(!empty.contains(c)) generatesEmpty = false;
 			}
-			
-			Set<String> toAdd = begins.get(c);
-			for(String add : toAdd) {
-				if(forName(add) == null) current.add(add);
+		}
+		
+		if(cs == null || generatesEmpty) {
+			current.addAll(previous);
+		} 
+		
+		if(cs != null) {
+			for(String c : cs) {
+				Set<String> toAdd = begins.get(c);
+				if(toAdd != null) {
+					current.addAll(toAdd);
+				}
+				if(!empty.contains(c)) break;
 			}
 		}
 		

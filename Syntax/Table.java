@@ -146,11 +146,12 @@ public class Table implements Serializable {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for(String c : cols.keySet()) sb.append(c + "\t\t\t");
+		for(String c : cols.keySet()) sb.append(c + "\t\t");
 		sb.append("\n");
 		for(String state : rows.keySet()) {
+			sb.append(state + "\t");
 			for(String c : cols.keySet()) {
-				sb.append(this.get(state, c) + "\t\t");
+				sb.append(this.get(state, c) + "\t");
 			}
 			sb.append("\n");
 		}
