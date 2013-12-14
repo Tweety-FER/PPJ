@@ -37,7 +37,7 @@ public class SymbolTable {
 	public SymbolTable(SymbolTable parent) {
 		this.parent = parent;
 		this.children = new ArrayList<SymbolTable>();
-		this.symbols = new HashMap<String, Symbol>();
+		this.symbols = new HashMap<String, Symbol>(); 
 	}
 	
 	/**
@@ -59,11 +59,30 @@ public class SymbolTable {
 	}
 	
 	/**
-	 * Adds a symbol to the symbol table
-	 * @param symbol Symbol
+	 * Checks whether all declared functions are also defined (together with the declaration,
+	 * or later in the code).
+	 * @return Are all functions defined
 	 */
-	public void putSymbol(Symbol symbol) {
+	public boolean allFunctionsDefined() {
+		SymbolTable root = getRoot();
+		for(Symbol f : root.symbols.values()) {
+			if(f.isFunction() && !f.defined) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Adds a symbol to the table if it doesn't already exist at this scope.
+	 * @param symbol Symbol
+	 * @return Whether the symbol was successfully added.
+	 */
+	public boolean putSymbol(Symbol symbol) {
+		if(this.symbols.containsKey(symbol.name)) return false;
 		this.symbols.put(symbol.name, symbol);
+		return true;
 	}
 	
 	/**
@@ -74,6 +93,77 @@ public class SymbolTable {
 		SymbolTable child = new SymbolTable(this);
 		this.children.add(child);
 		return child;
+	}
+	
+	/**
+	 * Checks whether a function is defined. Returns false for non-functions and functions which are not
+	 * declared, as well.
+	 * @param name Function name
+	 * @return Whether a function exists and is defined
+	 */
+	public boolean isDefinedFunction(String name) {
+		SymbolTable root = getRoot();
+		Symbol s = root.getSymbol(name);
+		return (s != null && s.isFunction() && !s.defined);
+	}
+	
+	/**
+	 * Creates a function definition and declaration in one fell swoop, all in global scope.
+	 * This isn't javascript, you know.
+	 * @param name Function name
+	 * @param returnType Function return type
+	 * @param paramTypes Function parameter types or empty list for void
+	 * @return Indication of success
+	 */
+	public boolean defineFunction(String name, Type returnType, List<Type> paramTypes) {
+		SymbolTable root = getRoot();
+		Symbol s = root.getSymbol(name);
+		if(s != null) {
+			if(s.isFunction() && !s.defined && paramTypes.equals(s.signature.y) 
+					&& returnType.equals(s.signature.x)) {
+					s.defined = true;
+			return true;
+			} else {
+				return false;
+			}
+		}
+		
+		s = new Symbol(name, null, new Pair<Type, List<Type>>(returnType, paramTypes));
+		s.defined = true;
+		this.putSymbol(s);
+		return true;
+	}
+	
+	/**
+	 * Declares a function in global scope.
+	 * @param name Function name
+	 * @param returnType Function return type
+	 * @param paramTypes Function parameter types or empty for void
+	 * @return Indication of success
+	 */
+	public boolean declareFunction(String name, Type returnType, List<Type> paramTypes) {
+		if(this.symbols.containsKey(name)) {
+			Symbol oldDeclaration = this.symbols.get(name);
+			if(oldDeclaration.isFunction() && oldDeclaration.signature.x.equals(returnType) &&
+					oldDeclaration.signature.y.equals(paramTypes)) {
+				return true;
+			}
+			
+			return false;
+		}
+		
+		Symbol newSymbol = new Symbol(name, null, new Pair<Type, List<Type>>(returnType, paramTypes));
+		this.putSymbol(newSymbol);
+		return true;
+	}
+	
+	/**
+	 * Gets to the root of things
+	 * @return Returns the root, global table.
+	 */
+	protected SymbolTable getRoot() {
+		if(this.parent == null) return this;
+		return this.parent.getRoot();
 	}
 	
 	/**

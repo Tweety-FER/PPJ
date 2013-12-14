@@ -14,5 +14,7 @@ public enum Type {
 	ConstArrayInt,
 	ArrayChar,
 	ConstArrayChar,
-	Void
+	Void,
+	Function,
+	None
 }

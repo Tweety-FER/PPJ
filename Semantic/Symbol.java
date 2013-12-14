@@ -26,6 +26,8 @@ public class Symbol {
 	 */
 	final Pair<Type, List<Type>> signature;
 	
+	boolean defined;
+	
 	/**
 	 * Constructor
 	 * @param name Name of the function or variable
@@ -36,6 +38,7 @@ public class Symbol {
 		this.name = name;
 		this.type = type;
 		this.signature = signature;
+		this.defined = false;
 	}
 	
 	/**

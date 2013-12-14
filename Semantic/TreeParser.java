@@ -32,7 +32,6 @@ public class TreeParser {
 		while((line = reader.readLine()) != null) {
 			String trimmedLine = line.replaceAll("^\\s*(\\S.*)$", "$1");
 			level = line.length() - trimmedLine.length();
-			
 			if(trimmedLine.isEmpty()) continue;
 			
 			if(stack.isEmpty() || level >= stack.peek().y.intValue()) {
@@ -41,8 +40,9 @@ public class TreeParser {
 						level)
 						);
 			} else {
-				reduce(level - 1);
-				stack.peek().x.addChild(new SyntacticTreeNode(trimmedLine));
+				reduce(level-1);
+				stack.push(new Pair<SyntacticTreeNode, Integer>(new SyntacticTreeNode(trimmedLine), new Integer(level)));
+				//stack.peek().x.addChild(new SyntacticTreeNode(trimmedLine));
 			}
 		}
 		reduce(0);
@@ -53,12 +53,13 @@ public class TreeParser {
 	 * Reduces the stack until the top is at a certain depth, adding elements to a tree.
 	 * @param level Level to which the stack must be trimmed.
 	 */
-	public static void reduce(int level) {
+	private static void reduce(int level) {
 		Stack<Pair<SyntacticTreeNode, Integer>> temp = new Stack<Pair<SyntacticTreeNode,Integer>>();
 		int topLevel, tempLevel = -1;
 		
 		while(true) {
 			topLevel = stack.peek().y.intValue();
+
 			if(!temp.isEmpty()) {
 				tempLevel = temp.peek().y;
 			} else {
