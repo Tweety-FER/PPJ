@@ -626,7 +626,7 @@ public class SemantickiAnalizator {
 			lista_parametara(node.getChild(2));
 			String name = node.getChild(0).getInfoPacket().contents;
 			List<Type> types = node.getChild(2).getTypes();
-			if(!table.defineFunction(name, inheritedType, types)) {
+			if(!table.declareFunction(name, inheritedType, types)) {
 				perror(node);
 			}
 			
@@ -692,8 +692,8 @@ public class SemantickiAnalizator {
 			
 			lista_parametara(node.getChild(3));
 			
-			if(!table.defineFunction(node.getChild(1).getContents(), node.getChild(0).getType(), 
-					node.getChild(3).getArgumentTypes())) {
+			if(!table.defineFunction(node.getChild(1).getInfoPacket().contents, node.getChild(0).getType(), 
+					node.getChild(3).getTypes())) {
 				perror(node);	
 			}
 			
@@ -723,15 +723,15 @@ public class SemantickiAnalizator {
 			node.addName(node.getChild(0).getName());
 		} else {
 			lista_parametara(node.getChild(0));
-			deklaracija_parametra(node.getChild(1));
-			if(node.getChild(0).getNames().contains(node.getChild(1).getName())) {
+			deklaracija_parametra(node.getChild(2));
+			if(node.getChild(0).getNames().contains(node.getChild(2).getName())) {
 				perror(node);
 			}
 			
 			node.setTypes(node.getChild(0).getTypes());
-			node.addType(node.getChild(1).getType());
+			node.addType(node.getChild(2).getType());
 			node.setNames(node.getChild(0).getNames());
-			node.addName(node.getChild(1).getName());
+			node.addName(node.getChild(2).getName());
 		}
 	}
 	
@@ -834,12 +834,28 @@ public class SemantickiAnalizator {
 		SyntaxInformationPacket info = node.getInfoPacket();
 		if(!info.type.matches("^<.*?>$")) {
 			if(info.type.equals("NIZ_ZNAKOVA")) {
-				return info.contents.trim().length() - 1;
+				return getStrlen(info.contents.trim());
 			}
 			
 			return 0;
 		} 
 		
 		return generatesString(node.getChild(0));
+	}
+	
+	private static int getStrlen(String s) {
+		if(!isString(s)) return 0;
+		s = s.replaceAll("^\"(.+?)\"$", "$1");
+		int len = 0;
+		
+		char c[] = s.toCharArray();
+		for(int i = 0; i < c.length; i++) {
+			if(c[i] == '\\')  {
+				i++;
+			}
+				len++;
+		}
+		
+		return len;
 	}
 }

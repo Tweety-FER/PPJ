@@ -127,8 +127,9 @@ public class TypeCast {
 		
 		List<Type> cast = new ArrayList<Type>(casts.get(type));
 		
-		if (type.equals(Type.Int) && explicit) {
+		if ((type.equals(Type.Int) || type.equals(Type.ConstInt)) && explicit) {
 			cast.add(Type.Char);
+			cast.add(Type.ConstChar);
 		}
 		
 		return cast;
