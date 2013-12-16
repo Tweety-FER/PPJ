@@ -65,13 +65,20 @@ public class SymbolTable {
 	 */
 	public boolean allFunctionsDefined() {
 		SymbolTable root = getRoot();
-		for(Symbol f : root.symbols.values()) {
-			if(f.isFunction() && !f.defined) {
-				return false;
-			}
+		return root.funDefined();
+	}
+	
+	private boolean funDefined() {
+		for(Symbol f : symbols.values()) {
+			if(f.isFunction() && !f.defined) return false;
 		}
 		
-		return true;
+		boolean ret = true;
+		for(SymbolTable baby : this.children) {
+			ret = ret && baby.funDefined();
+		}
+		
+		return ret;
 	}
 	
 	/**
@@ -102,7 +109,7 @@ public class SymbolTable {
 	 * @return Whether a function exists and is defined
 	 */
 	public boolean isDefinedFunction(String name) {
-		SymbolTable root = getRoot();
+		SymbolTable root = this; //getRoot();
 		Symbol s = root.getSymbol(name);
 		return (s != null && s.isFunction() && !s.defined);
 	}
@@ -116,7 +123,7 @@ public class SymbolTable {
 	 * @return Indication of success
 	 */
 	public boolean defineFunction(String name, Type returnType, List<Type> paramTypes) {
-		SymbolTable root = getRoot();
+		SymbolTable root = this; //getRoot();
 		Symbol s = root.getSymbol(name);
 		if(s != null) {
 			if(s.isFunction() && !s.defined && paramTypes.equals(s.signature.y) 
@@ -130,7 +137,7 @@ public class SymbolTable {
 		
 		s = new Symbol(name, null, new Pair<Type, List<Type>>(returnType, paramTypes));
 		s.defined = true;
-		this.putSymbol(s);
+		root.putSymbol(s);
 		return true;
 	}
 	
@@ -153,7 +160,7 @@ public class SymbolTable {
 		}
 		
 		Symbol newSymbol = new Symbol(name, null, new Pair<Type, List<Type>>(returnType, paramTypes));
-		this.putSymbol(newSymbol);
+		this.putSymbol(newSymbol); //GetRoot
 		return true;
 	}
 	

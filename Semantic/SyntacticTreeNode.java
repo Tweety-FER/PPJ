@@ -129,6 +129,7 @@ public class SyntacticTreeNode {
 	 * @return Type
 	 */
 	public Type getType() {
+	//	if(this.type.equals(Type.Function)) return this.returnType;
 		return this.type;
 	}
 	
@@ -210,7 +211,7 @@ public class SyntacticTreeNode {
 	 * @param node Another node. Or the same node. But the Bible says it shouldn't be done.
 	 */
 	public void inheritType(SyntacticTreeNode node) {
-		if(node.getType().equals(Type.Function)) {
+		if(node.isFunction()) {
 			this.setFunctionSignature(node.getReturnType(), node.getArgumentTypes());
 		} else {
 			this.setType(node.getType());

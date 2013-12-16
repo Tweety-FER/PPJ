@@ -90,6 +90,13 @@ public class TypeCast {
 		return t.equals(Type.Int) || t.equals(Type.Char) || t.equals(Type.ConstChar) || t.equals(Type.ConstInt);
 	}
 	
+	public static boolean canCastNodeFromTo(SyntacticTreeNode n, Type t, boolean explicit) {
+//		if(n.getType().equals(Type.Function)) {
+//			return canCastFromTo(n.getReturnType(), t, explicit);
+//		}
+		return canCastFromTo(n.getType(), t, explicit);
+	}
+	
 	/**
 	 * Checks whether a type is an array of X. See above for X.
 	 * @param t Type
@@ -188,5 +195,8 @@ public class TypeCast {
 		cast = new ArrayList<Type>();
 		cast.add(Type.Void);
 		casts.put(Type.Void, cast);
+		
+		//function
+		casts.put(Type.Function, new ArrayList<Type>());
 	}
 }

@@ -3,29 +3,31 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class SemantickiAnalizator {
 
 	private static SyntacticTreeNode root;
 	private static Type functionReturnType;
-	private static int insideLoop;
+	private static int loopCounter;
 	private static SymbolTable table;
 	
 	public static void main(String[] args) {
 		try {
 			table = GlobalSymbolTableProvider.instance();
 			root = TreeParser.read(System.in);
-			insideLoop = 0;
+			loopCounter = 0;
 			functionReturnType = Type.None;
 			prijevodna_jedinica(root);
 			
 			Symbol main = table.getRoot().getSymbol("main");
-			if(main == null || !main.isFunction()) {
-				System.err.println("main");
+			if(main == null || !main.isFunction() || 
+					!main.signature.equals(new Pair<Type, List<Type>>(Type.Int, new ArrayList<Type>()))) {
+				System.out.println("main");
 				System.exit(101);
 			}
 			
 			if(!table.allFunctionsDefined()) {
-				System.err.println("funkcija");
+				System.out.println("funkcija");
 				System.exit(102);
 			}
 			
@@ -46,9 +48,7 @@ public class SemantickiAnalizator {
 			if(idn == null) {
 				perror(node);
 			} 
-			
 			if(idn.isFunction()) {
-				node.setType(Type.Function);
 				node.setFunctionSignature(idn.signature.x, idn.signature.y);
 			} else {
 				node.setType(idn.type);
@@ -94,6 +94,7 @@ public class SemantickiAnalizator {
 			
 		} else if(data.type.equals("<postfiks_izraz>")) {
 			postfiks_izraz(child0);
+
 			SyntaxInformationPacket lBracket = node.getChild(1).getInfoPacket();
 			
 			if(lBracket.type.equals("L_UGL_ZAGRADA")) {
@@ -102,12 +103,13 @@ public class SemantickiAnalizator {
 				}
 				
 				izraz(node.getChild(2));
-				if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+				if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 					perror(node);
 				}
 				
-				node.setType(TypeCast.fromArray(node.getChild(2).getType()));
-				node.setLExpression(!TypeCast.isConst(node.getType(), false));
+				Type X = TypeCast.fromArray(child0.getType());
+				node.setType(X);
+				node.setLExpression(!TypeCast.isConst(X, false));
 			} else if(lBracket.type.equals("L_ZAGRADA") && node.getChildren().size() == 3) {
 				if(!(child0.isFunction() && child0.getArgumentTypes().isEmpty())) {
 					perror(node);
@@ -138,9 +140,7 @@ public class SemantickiAnalizator {
 				node.setType(child0.getReturnType());
 			
 			} else if(lBracket.type.equals("OP_INC") || lBracket.type.equals("OP_DEC")) {
-				SyntacticTreeNode child1 = node.getChild(1);
-				postfiks_izraz(child1);
-				if(!(child1.isLExpression() && TypeCast.canCastFromTo(child1.getType(), Type.Int, false))) {
+				if(!(child0.isLExpression() && TypeCast.canCastNodeFromTo(child0, Type.Int, false))) {
 					perror(node);
 				}
 			}
@@ -150,12 +150,12 @@ public class SemantickiAnalizator {
 	private static void izraz(SyntacticTreeNode node) {
 		if(node.getChildren().size() == 1) {
 			izraz_pridruzivanja(node.getChild(0));
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			izraz(node.getChild(0));
 			izraz_pridruzivanja(node.getChild(1));
-			node.setType(node.getChild(1).getType());
+			node.inheritType(node.getChild(1));
 		}
 	}
 	
@@ -171,11 +171,11 @@ public class SemantickiAnalizator {
 			}
 			
 			izraz_pridruzivanja(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), node.getChild(0).getType(), false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), node.getChild(0).getType(), false)) {
 				perror(node);
 			}
 			
-			node.setType(node.getChild(2).getType());
+			node.inheritType(node.getChild(2));
  		}
 	}
 	
@@ -194,18 +194,18 @@ public class SemantickiAnalizator {
 	private static void unarni_izraz(SyntacticTreeNode node) {
 		if(node.getChildren().size() == 1) {
 			postfiks_izraz(node.getChild(0));
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			if(node.getChild(0).getInfoPacket().type.equals("<unarni_operator>")) {
 				cast_izraz(node.getChild(1));
-				if(!(TypeCast.canCastFromTo(node.getChild(1).getType(), Type.Int, false))) {
+				if(!(TypeCast.canCastNodeFromTo(node.getChild(1), Type.Int, false))) {
 					perror(node);
 				}
 			} else {
 				unarni_izraz(node.getChild(1));
 				if(!(node.getChild(1).isLExpression() && 
-						TypeCast.canCastFromTo(node.getChild(1).getType(), Type.Int, false))) {
+						TypeCast.canCastNodeFromTo(node.getChild(1), Type.Int, false))) {
 					perror(node);
 				}
 			}
@@ -216,27 +216,28 @@ public class SemantickiAnalizator {
 	private static void cast_izraz(SyntacticTreeNode node) {
 		if(node.getChildren().size() == 1) {
 			unarni_izraz(node.getChild(0));
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			ime_tipa(node.getChild(1));
 			cast_izraz(node.getChild(3));
-			if(!(TypeCast.canCastFromTo(
-					node.getChild(3).getType(), 
+			
+			if(!(TypeCast.canCastNodeFromTo(
+					node.getChild(3), 
 					node.getChild(1).getType(), 
 					true
 			))) {
 				perror(node);
 			}
 			
-			node.setType(node.getChild(1).getType());
+			node.inheritType(node.getChild(1));
 		}
 	}
 	
 	private static void ime_tipa(SyntacticTreeNode node) {
 		if(node.getChildren().size() == 1) {
 			specifikator_tipa(node.getChild(0));
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));
 		} else {
 			specifikator_tipa(node.getChild(1));
 			if(node.getChild(1).getType().equals(Type.Void)) {
@@ -266,12 +267,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			multiplikativni_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			cast_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -286,11 +287,11 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			aditivni_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			multiplikativni_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -305,12 +306,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			odnosni_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			aditivni_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -325,12 +326,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			jednakosni_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			odnosni_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -345,12 +346,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			bin_i_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			jednakosni_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -365,12 +366,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			bin_xili_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			bin_i_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -385,12 +386,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			bin_ili_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			bin_xili_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -405,12 +406,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			log_i_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			bin_ili_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -425,12 +426,12 @@ public class SemantickiAnalizator {
 			node.setLExpression(node.getChild(0).isLExpression());
 		} else {
 			log_ili_izraz(node.getChild(0));
-			if(!TypeCast.canCastFromTo(node.getChild(0).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
 			
 			log_i_izraz(node.getChild(2));
-			if(!TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 			
@@ -438,17 +439,18 @@ public class SemantickiAnalizator {
 		}
 	}
 	
-	private static void slozena_naredba(SyntacticTreeNode node) {
-		if(node.getChildren().size() == 3) {
-			table = table.makeChild();
+	private static void slozena_naredba(SyntacticTreeNode node, List<Symbol> symToAdd) {
+		table = table.makeChild();
+		if(symToAdd != null) {
+			for(Symbol s : symToAdd) table.putSymbol(s);
+		}
+		if(node.getChildren().size() == 3) {	
 			lista_naredbi(node.getChild(1));
-			table = table.getParent();
 		} else {
-			table = table.makeChild();
 			lista_deklaracija(node.getChild(1));
 			lista_naredbi(node.getChild(2));
-			table = table.getParent();
 		}
+		table = table.getParent();
 	}
 	
 	private static void lista_naredbi(SyntacticTreeNode node) {
@@ -464,7 +466,7 @@ public class SemantickiAnalizator {
 	private static void naredba(SyntacticTreeNode node) {
 		SyntaxInformationPacket info = node.getChild(0).getInfoPacket();
 		if(info.type.equals("<slozena_naredba>")) {
-			slozena_naredba(node.getChild(0));
+			slozena_naredba(node.getChild(0), null);
 		} else if(info.type.equals("<izraz_naredba>")) {
 			izraz_naredba(node.getChild(0));
 		} else if(info.type.equals("<naredba_grananja>")) {
@@ -481,16 +483,16 @@ public class SemantickiAnalizator {
 			node.setType(Type.Int);
 		} else {
 			izraz(node.getChild(0));
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));;
 		}
 	}
 	
 	private static void naredba_grananja(SyntacticTreeNode node) {
-		//TODO Implement
+
 	}
 	
 	private static void naredba_petlje(SyntacticTreeNode node) {
-		//TODO Implement
+
 	}
 	
 	private static void naredba_skoka(SyntacticTreeNode node) {
@@ -501,13 +503,13 @@ public class SemantickiAnalizator {
 					perror(node);
 				}
 			} else {
-				if(insideLoop == 0) {
+				if(loopCounter <= 0) {
 					perror(node);
 				}
 			}
 		} else {
 			izraz(node.getChild(1));
-			if(!TypeCast.canCastFromTo(node.getChild(1).getType(), functionReturnType, false)) {
+			if(!TypeCast.canCastNodeFromTo(node.getChild(1), functionReturnType, false)) {
 				perror(node);
 			}
 		}
@@ -566,9 +568,7 @@ public class SemantickiAnalizator {
 			inicijalizator(node.getChild(2));
 			
 			if(TypeCast.isX(node.getChild(0).getType())) {
-				if(!(TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Char, false)
-					|| TypeCast.canCastFromTo(node.getChild(2).getType(), Type.Int, false))) {
-			
+				if(!TypeCast.canCastNodeFromTo(node.getChild(2), node.getChild(0).getType(), false)) {
 						perror(node);
 					}
 				
@@ -606,7 +606,8 @@ public class SemantickiAnalizator {
 			}
 			
 			int number = Integer.valueOf(node.getChild(2).getInfoPacket().contents);
-			Symbol symbol = new Symbol(node.getChild(0).getInfoPacket().contents, inheritedType, null);
+			Symbol symbol = new Symbol(node.getChild(0).getInfoPacket().contents, 
+					TypeCast.toArray(inheritedType), null);
 			
 			if(number <= 0 || number > 1024 || !table.putSymbol(symbol)) {
 				perror(node);
@@ -644,7 +645,7 @@ public class SemantickiAnalizator {
 					node.addType(Type.Char);
 				}
 			} else {
-				node.setType(node.getChild(0).getType());
+				node.inheritType(node.getChild(0));
 			}
 		} else {
 			lista_izraza_pridruzivanja(node.getChild(1));
@@ -678,9 +679,7 @@ public class SemantickiAnalizator {
 			
 			Type temp = functionReturnType;
 			functionReturnType = node.getChild(0).getType();
-			table = table.makeChild();
-			slozena_naredba(node.getChild(5));
-			table = table.getParent();
+			slozena_naredba(node.getChild(5), null);
 			functionReturnType = temp;
 			
 		} else {
@@ -702,16 +701,14 @@ public class SemantickiAnalizator {
 			
 			Type temp = functionReturnType;
 			functionReturnType = node.getChild(0).getType();
-			table = table.makeChild();
 			
+			List<Symbol> symToAdd = new ArrayList<Symbol>();
 			//Adding function parameters as variables within scope
 			for(int i = 0; i < paramNames.size(); i++) {
-				table.putSymbol(new Symbol(paramNames.get(i), paramTypes.get(i), null));
+				symToAdd.add(new Symbol(paramNames.get(i), paramTypes.get(i), null));
 			}
 			
-			slozena_naredba(node.getChild(5));
-			
-			table = table.getParent();
+			slozena_naredba(node.getChild(5), symToAdd);
 			functionReturnType = temp;
 		}
 	}
@@ -743,7 +740,7 @@ public class SemantickiAnalizator {
 		
 		node.setName(node.getChild(1).getInfoPacket().contents);
 		if(node.getChildren().size() == 2) {
-			node.setType(node.getChild(0).getType());
+			node.inheritType(node.getChild(0));
 		} else {
 			node.setType(TypeCast.toArray(node.getChild(0).getType()));
 		}
@@ -764,7 +761,7 @@ public class SemantickiAnalizator {
 		for(SyntacticTreeNode child : node.getChildren()) {
 			expression.append(child.getInfoPacket() + " ");
 		}
-		System.err.println(node.getInfoPacket() + " ::= " + expression.toString().trim());
+		System.out.println(node.getInfoPacket() + " ::= " + expression.toString().trim());
 		System.exit(100);
 	}
 	
