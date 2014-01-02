@@ -20,6 +20,10 @@ public class FRISCCommandBuilder {
 	 */
 	private StackContainer locals;
 	
+	private int lexprCounter = 0;
+	
+	private int branchCounter = 0;
+	
 	/**
 	 * Initial strings and variable init
 	 */
@@ -111,6 +115,22 @@ public class FRISCCommandBuilder {
 			locals.push(name);
 			printer.append("\tMOVE " + constant + ", (R7 + " + locals.getStrOffset(name) + ")\n");
 		}
+	}
+	
+	/**
+	 * Used to number labels in logical expressions.
+	 * @return Number of next logical expression.
+	 */
+	public int getNextLogicalExpressionNumber() {
+		return this.lexprCounter++;
+	}
+	
+	/**
+	 * Used to number labels in branching expression
+	 * @return Number of next branching expression
+	 */
+	public int getNextBranchNumber() {
+		return this.branchCounter++;
 	}
 	
 	/**
@@ -215,7 +235,7 @@ public class FRISCCommandBuilder {
 	 * @param op Operation name
 	 * @param tag Tag or null if no tag
 	 */
-	private void doBinaryOp(String op, String tag) {
+	public void doBinaryOp(String op, String tag) {
 		if(tag != null) printer.append(tag + "\n");
 		printer.append("\tPOP R1\n");
 		printer.append("\tPOP R0\n");

@@ -57,10 +57,13 @@ public class SemantickiAnalizator {
 				node.setFunctionSignature(idn.signature.x, idn.signature.y);
 				//TODO I honestly have no idea. I think it should just store the function name
 				//Somewhere internally for when it is needed later. Experiment
+				//STILL haven't implemented that one, I am not sure what we ought to do here.
 			} else {
 				node.setType(idn.type);
 				node.setLExpression(true);
-				//TODO push variable for given name, local or global, builder should be able to tell
+				//Telling it that it should have a variable somewhere and that its contents should be
+				//Put on stack.
+				builder.putVariable(idn.name);
 			}
 		} else if (data.type.equals("BROJ")) {
 			if (!isInt(data.contents)) {
@@ -68,7 +71,8 @@ public class SemantickiAnalizator {
 			}
 			node.setType(Type.Int);
 			node.setLExpression(false);
-			//TODO Get value from string contents and push it
+			//Getting contents string repr of number and then extracting value
+			builder.putConstant(Integer.valueOf(data.contents));
 
 		} else if (data.type.equals("ZNAK")) {
 			if (!isChar(data.contents)) {
@@ -77,7 +81,8 @@ public class SemantickiAnalizator {
 
 			node.setType(Type.Char);
 			node.setLExpression(false);
-			//TODO Get value from string contents (mind the special characters and surrounding 's!) and push it
+			//Get integer value of contents of character
+			builder.putConstant(extractCharacterValue(data.contents));
 			
 		} else if (data.type.equals("NIZ_ZNAKOVA")) {
 			if (!isString(data.contents)) {
@@ -86,10 +91,13 @@ public class SemantickiAnalizator {
 
 			node.setType(Type.ConstArrayChar);
 			node.setLExpression(false);
-			//TODO Push all the characters as constants + '\0', which is 0
-			//putConstant in a loop should work
-			//Need to get real value for special character (e.g. \n)
-			//Could be messy
+			//NOT sure if this will actuall work, maybe it needs to be reversed? (Stack instead of List)
+			List<Integer> strVals = extractStringValue(data.contents);
+			for(Integer val : strVals) {
+				builder.putConstant(val);
+			}
+			builder.putConstant(0); //Terminating \0
+			
 		} else if (data.type.equals("L_ZAGRADA")) {
 			SyntacticTreeNode child1 = node.getChild(1);
 			izraz(child1);
@@ -333,10 +341,14 @@ public class SemantickiAnalizator {
 
 			node.setType(Type.Int);
 			
-			//TODO Get left value (should be on stack), get right value (likewise!) and
-			//depending on the operation (child 1) call multiplication function (inbuilt)
-			//division function (likewise) or mod function (likewise). Is called with
-			// build.freeStyle("\tCALL " + name "\n");
+			char operationRepr = node.getChild(1).getInfoPacket().contents.charAt(0); //Read operator *, / or %
+			//Both operands should be on stack, y above x, so no popping here
+			switch(operationRepr) {
+				case '*': builder.freeStyle("\tCALL MULT_BUILTIN"); break;
+				case '/': builder.freeStyle("\tCALL DIV_BUILTIN"); break;
+				case '%': builder.freeStyle("\tCALL MOD_BUILTIN"); break;
+				default: break;
+			}
 		}
 	}
 
@@ -356,8 +368,14 @@ public class SemantickiAnalizator {
 			}
 
 			node.setType(Type.Int);
-			//TODO Get left and right values (should be on stack, in right order) and
-			//depending on the operation (child 1) add or subtract (implement using build.binaryOp)
+			String op = node.getChild(1).getInfoPacket().type;
+			//The other way to differentiate between types, using lexical units instead of contents
+			//See above for first
+			if(op.equals("PLUS")) {
+				builder.doBinaryOp("ADD", null);
+			} else {
+				builder.doBinaryOp("SUB", null);
+			}
 		}
 	}
 
@@ -378,6 +396,11 @@ public class SemantickiAnalizator {
 			}
 
 			node.setType(Type.Int);
+			//TODO Podsjetite me da vas zadavim. Pa kako ovo ne mozete implementirati?!
+			//Doslovno sam vam tu napisao kaj treba za >=, samo treba apstrahirati tako da
+			//se DOSLOVNO promjeni JP_x u neki x ovisno o tipu usporedbe
+			//Predlazem u builderu da se napravi slicna funkcija kao doBinaryOp samo doComparisonOp
+			
 			//TODO Get left and right values (should be on stack, in right order) and
 			//depending on the operation (child 1) call CMP followed by checked whether
 			//the the condition (e.g. LTE, GT, ...) is true. If true, add a part where it
@@ -416,6 +439,7 @@ public class SemantickiAnalizator {
 			node.setType(Type.Int);
 			//TODO See above, only use EQ and NEQ instead of comparing.
 			//This could possibly be abstracted!
+			//See angry comment in Croatian above, the same thing could be done.
 		}
 	}
 
@@ -436,8 +460,7 @@ public class SemantickiAnalizator {
 			}
 
 			node.setType(Type.Int);
-			//TODO Get left and right operands, should be on stack
-			//Implement using doBinaryOp with AND operation
+			builder.doBinaryOp("AND", null);
 		}
 	}
 
@@ -460,6 +483,7 @@ public class SemantickiAnalizator {
 			node.setType(Type.Int);
 			//TODO Get left and right operands, should be on stack
 			//Implement using doBinaryOp with XOR operation
+			//See what I did above? Just use XOR instead of AND.
 		}
 	}
 
@@ -482,6 +506,7 @@ public class SemantickiAnalizator {
 			node.setType(Type.Int);
 			//TODO Get left and right operands, should be on stack
 			//Implement using doBinaryOp with OR operation
+			//See above.
 		}
 	}
 
@@ -495,17 +520,25 @@ public class SemantickiAnalizator {
 			if (!TypeCast.canCastNodeFromTo(node.getChild(0), Type.Int, false)) {
 				perror(node);
 			}
-
+			
+			//THIS is new
+			int logExprCnt = builder.getNextLogicalExpressionNumber();
+			builder.freeStyle("\tPOP R0"); //We want to check the value of the first expression
+			builder.freeStyle("\tCMP R0, 0"); //Is it false?
+			builder.freeStyle("\tJP_NE AND_CONTINUE_" + logExprCnt); //If not carry on
+			builder.freeStyle("\tPUSH R0"); //If it IS false return it on stack, we need the result
+			builder.freeStyle("\tJP AND_DONE_" + logExprCnt); //But don't evaluate further, jump to end
+			builder.freeStyle("AND_CONTINUE_" + logExprCnt); //Here is where we carry on
+			//THIS is old
 			bin_ili_izraz(node.getChild(2));
 			if (!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 				perror(node);
 			}
 
 			node.setType(Type.Int);
-			//TODO Get left operand. If it is 0, we know the expression is false.
-			//Push 0 and end. Else check the right expression and return the appropriate
-			//value (0 false or 1 true)
-			//TIP use labels (again, numbered!)
+			
+			//This line also new
+			builder.freeStyle("AND_DONE_" + logExprCnt); //The end of the logical expression
 		}
 	}
 
@@ -530,6 +563,9 @@ public class SemantickiAnalizator {
 			//Push 1 and end. Else check the right expression and return the appropriate
 			//value (0 false or 1 true)
 			//See above tip
+			
+			//SEE ABOVE! The same goddamned thing just you don't want it to be false, but true
+			//So you actually do JP_EQ instea of JP_NE.
 		}
 	}
 
@@ -592,10 +628,14 @@ public class SemantickiAnalizator {
 		if (!TypeCast.canCastNodeFromTo(node.getChild(2), Type.Int, false)) {
 			perror(node);
 		}
-		//TODO Pop value of izraz (should be boolean on stack).
-		//If 0, jump to ELSE_n. n must be a unique number for any branch (use a counter?)
+		
+		int branchNum = builder.getNextBranchNumber();
+		builder.freeStyle("\tPOP R0");
+		builder.freeStyle("\tCMP R0, 0"); //Compare. Is it false?! OH GOD?! IS IT FALSE?!
+		builder.freeStyle("\tJP_EQ ELSE_" + branchNum); //FUCK! ABORT! ABORT! GOTO ELSE!
+		
 		naredba(node.getChild(4));
-		//TODO Print "ELSE_n"
+		builder.freeStyle("ELSE_" + branchNum);
 		//If there is no else, it will just skip the if, if there IS an else, it will perform it
 		if (node.getChildren().size() == 7) {
 			naredba(node.getChild(6));
@@ -604,7 +644,6 @@ public class SemantickiAnalizator {
 	}
 
 	private static void naredba_petlje(SyntacticTreeNode node) {
-		//TODO Fuck, this is complicated
 		if (node.getChildren().size() == 5) {
 			loopCounter++;
 			//TODO print label like "LOOP_COND_n" where n must be unique for loops
@@ -1087,5 +1126,38 @@ public class SemantickiAnalizator {
 		}
 
 		return len;
+	}
+	
+	private static int extractCharacterValue(String repr) {
+		repr = repr.replace("'", ""); //Removing single quotes
+		if(repr.length() == 2) {
+			switch(repr.charAt(1)) {
+			case 'n': return (int) '\n';
+			case 't': return (int) '\t';
+			case '0': return 0;
+			case '\\': return (int) '\\';
+			case '"': return (int) '"';
+			case '\'': return (int) '\'';
+			default: return -1;
+			}
+		}
+		
+		return (int) repr.charAt(0);
+	}
+	
+	private static List<Integer> extractStringValue(String repr) {
+		repr = repr.replaceAll("^\"(.*)\"$", "$1"); //Removing double quotes
+		int length = repr.length();
+		List<Integer> vals = new ArrayList<Integer>();
+		
+		for(int i = 0; i < length; i++) {
+			if(repr.charAt(i) == '\\' && i < length - 1) {
+				vals.add(extractCharacterValue("'\\" + repr.charAt(++i) + "'"));
+			} else {
+				vals.add((int) repr.charAt(i));
+			}
+		}
+		
+		return vals;
 	}
 }
